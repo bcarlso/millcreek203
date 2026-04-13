@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mill Creek Inn Schedule</title>
+<style>
+  :root {
+    --color-a: #4A90D9;
+    --color-a-light: #EBF3FB;
+    --color-b: #E8813A;
+    --color-b-light: #FDF0E6;
+    --color-c: #50B87D;
+    --color-c-light: #E8F7EF;
+    --color-d: #9B6BC8;
+    --color-d-light: #F3ECF9;
+    --sidebar-width: 240px;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-800);
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-width);
+    background: #fff;
+    border-right: 1px solid var(--gray-200);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    overflow-y: auto;
+  }
+
+  .sidebar-logo {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    letter-spacing: -0.02em;
+  }
+  .sidebar-logo span { color: var(--gray-400); font-weight: 400; font-size: 0.85rem; display: block; margin-top: 2px; }
+
+  .sidebar-section-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gray-400);
+    margin-bottom: 12px;
+  }
+
+  .owner-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .owner-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--gray-700);
+    cursor: default;
+    transition: background 0.15s;
+  }
+  .owner-item:hover { background: var(--gray-50); }
+  .owner-item.active { background: var(--gray-100); font-weight: 600; }
+  .owner-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .owner-item .owner-key {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    margin-left: auto;
+  }
+
+  /* Current week card in sidebar */
+  .current-week-card {
+    border-radius: 10px;
+    padding: 14px;
+    color: #fff;
+  }
+  .current-week-card .cw-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.85;
+    margin-bottom: 6px;
+  }
+  .current-week-card .cw-owner {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+  .current-week-card .cw-detail {
+    font-size: 0.78rem;
+    opacity: 0.8;
+    margin-top: 4px;
+  }
+
+  /* ── Main content ── */
+  .main {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    padding: 24px 32px;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .topbar-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gray-900);
+  }
+  .topbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .topbar-nav button {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .topbar-nav button:hover { background: var(--gray-50); border-color: var(--gray-300); }
+  .topbar-nav .nav-arrow { width: 32px; height: 32px; font-size: 1rem; }
+  .topbar-nav .today-btn {
+    padding: 6px 14px;
+    font-weight: 500;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--gray-200);
+    margin-bottom: 24px;
+  }
+  .tab {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .tab:hover { color: var(--gray-600); }
+  .tab.active { color: var(--gray-900); border-bottom-color: var(--gray-900); }
+
+  /* ── Calendar grid ── */
+  .calendar-wrapper {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+  }
+
+  .calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .day-header {
+    text-align: left;
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    padding: 12px 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .day-cell {
+    min-height: 110px;
+    border-bottom: 1px solid var(--gray-100);
+    border-right: 1px solid var(--gray-100);
+    padding: 8px;
+    position: relative;
+    background: #fff;
+    transition: background 0.1s;
+  }
+  .day-cell:nth-child(7n) { border-right: none; }
+  .day-cell:hover { background: var(--gray-50); }
+
+  .day-cell.dimmed {
+    background: var(--gray-50);
+  }
+  .day-cell.dimmed .day-number { color: var(--gray-300); }
+  .day-cell.dimmed .owner-bar { opacity: 0.35; }
+
+  .day-cell.today-cell {
+    background: #FFFBEB;
+  }
+
+  .day-number {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: 6px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .day-cell.today-cell .day-number {
+    background: var(--gray-900);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.8rem;
+  }
+
+  /* Owner event bar inside each cell */
+  .owner-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: default;
+    border-radius: 0;
+    margin-left: -8px;
+    margin-right: -8px;
+    min-height: 28px;
+  }
+  /* Rounded left edge + accent border on first day of a run */
+  .owner-bar.run-start {
+    margin-left: 0;
+    border-radius: 6px 0 0 6px;
+    border-left: 3px solid transparent;
+  }
+  /* Rounded right edge on last day of a run */
+  .owner-bar.run-end {
+    margin-right: 0;
+    border-radius: 0 6px 6px 0;
+  }
+  /* Both start and end (single-day run) */
+  .owner-bar.run-start.run-end {
+    border-radius: 6px;
+  }
+
+  .owner-bar.bar-a { background: var(--color-a-light); color: #1e5a9e; }
+  .owner-bar.bar-b { background: var(--color-b-light); color: #9e4a12; }
+  .owner-bar.bar-c { background: var(--color-c-light); color: #1e7a4a; }
+  .owner-bar.bar-d { background: var(--color-d-light); color: #5e3a8e; }
+  .owner-bar.run-start.bar-a { border-left-color: var(--color-a); }
+  .owner-bar.run-start.bar-b { border-left-color: var(--color-b); }
+  .owner-bar.run-start.bar-c { border-left-color: var(--color-c); }
+  .owner-bar.run-start.bar-d { border-left-color: var(--color-d); }
+
+  /* Week number badge — shown on Fridays (start of new week) */
+  .week-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--gray-400);
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+
+  /* ── Year view ── */
+  .year-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  .mini-month {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid var(--gray-200);
+    padding: 14px;
+    cursor: pointer;
+    transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .mini-month:hover {
+    border-color: var(--gray-300);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  .mini-month-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 8px;
+  }
+
+  .mini-cal {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px 0;
+  }
+
+  .mini-cal .mini-header {
+    font-size: 0.6rem;
+    color: var(--gray-400);
+    text-align: center;
+    padding: 2px 0 4px;
+    font-weight: 500;
+  }
+
+  .mini-cal .mini-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    border-radius: 0;
+    color: #fff;
+    font-weight: 500;
+  }
+  .mini-cal .mini-day.mini-empty { background: transparent; }
+  .mini-cal .mini-day.mini-dimmed { opacity: 0.25; }
+  .mini-cal .mini-day.mini-today {
+    outline: 2px solid var(--gray-900);
+    outline-offset: -1px;
+    z-index: 1;
+  }
+  .mini-day.run-start { border-radius: 4px 0 0 4px; }
+  .mini-day.run-end { border-radius: 0 4px 4px 0; }
+  .mini-day.run-start.run-end { border-radius: 4px; }
+
+  .mini-day.owner-a { background: var(--color-a-light); color: #1e5a9e; }
+  .mini-day.owner-b { background: var(--color-b-light); color: #9e4a12; }
+  .mini-day.owner-c { background: var(--color-c-light); color: #1e7a4a; }
+  .mini-day.owner-d { background: var(--color-d-light); color: #5e3a8e; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 16px; }
+    .day-cell { min-height: 80px; padding: 6px; }
+    .owner-bar { font-size: 0.7rem; padding: 3px 6px; }
+    .year-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  }
+
+  @media (max-width: 600px) {
+    .day-cell { min-height: 60px; }
+    .owner-bar span { display: none; }
+    .day-number { font-size: 0.75rem; }
+    .year-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div>
+    <div class="sidebar-logo">
+      Mill Creek Inn
+      <span>Shared Schedule</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="sidebar-section-title">This Week</div>
+    <div class="current-week-card" id="currentWeekCard"></div>
+  </div>
+
+  <div>
+    <div class="sidebar-section-title">Owners</div>
+    <ul class="owner-list" id="ownerList"></ul>
+  </div>
+</aside>
+
+<!-- Main content -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title" id="monthYear"></div>
+    </div>
+    <div class="topbar-nav">
+      <button class="nav-arrow" id="prevMonth">&#8249;</button>
+      <button class="today-btn" id="todayBtn">Today</button>
+      <button class="nav-arrow" id="nextMonth">&#8250;</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tabCalendar">Month View</div>
+    <div class="tab" id="tabYear">Year View</div>
+  </div>
+
+  <div id="viewCalendar">
+    <div class="calendar-wrapper">
+      <div class="calendar" id="calendar"></div>
+    </div>
+  </div>
+
+  <div id="viewYear" style="display:none;">
+    <div class="year-grid" id="yearGrid"></div>
+  </div>
+</div>
+
+<script>
+const OWNERS = [
+  { key: 'A', name: 'Nguyen', label: 'A — Nguyen' },
+  { key: 'B', name: 'Carlson', label: 'B — Carlson' },
+  { key: 'C', name: 'Robson', label: 'C — Robson' },
+  { key: 'D', name: 'Attard', label: 'D — Attard' },
+];
+
+const START_KEYS  = ['B', 'D', 'A', 'C'];
+const DOUBLE_KEYS = ['D', 'A', 'C', 'B'];
+const KEY_ORDER = ['A', 'B', 'C', 'D'];
+
+function getFirstFriday(year) {
+  const jan1 = new Date(year, 0, 1);
+  const offset = (5 - jan1.getDay() + 7) % 7;
+  return new Date(year, 0, 1 + offset);
+}
+
+function cycleIndex(year) {
+  return ((year - 2023) % 4 + 4) % 4;
+}
+
+function getOwnerForWeek(year, weekNum) {
+  const startIdx = KEY_ORDER.indexOf(START_KEYS[cycleIndex(year)]);
+  const doubleKey = DOUBLE_KEYS[cycleIndex(year)];
+
+  if (weekNum <= 49) return KEY_ORDER[(startIdx + (weekNum - 1)) % 4];
+  if (weekNum >= 51) return doubleKey;
+
+  const normal50 = KEY_ORDER[(startIdx + 49) % 4];
+  if (normal50 === doubleKey) return KEY_ORDER[(startIdx + 50) % 4];
+  return normal50;
+}
+
+function getOwnerForDate(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  for (const schedYear of [d.getFullYear(), d.getFullYear() - 1]) {
+    const firstFri = getFirstFriday(schedYear);
+    const diffMs = d - firstFri;
+    if (diffMs < 0) continue;
+    const diffDays = Math.floor(diffMs / 86400000);
+    const weekNum = Math.floor(diffDays / 7) + 1;
+    if (weekNum >= 1 && weekNum <= 52) {
+      return { ownerKey: getOwnerForWeek(schedYear, weekNum), weekNum, scheduleYear: schedYear };
+    }
+  }
+  return { ownerKey: 'A', weekNum: 0, scheduleYear: d.getFullYear() };
+}
+
+// Get week start date (Friday) for a given date
+function getWeekStartForDate(date) {
+  const info = getOwnerForDate(date);
+  const firstFri = getFirstFriday(info.scheduleYear);
+  const start = new Date(firstFri);
+  start.setDate(start.getDate() + (info.weekNum - 1) * 7);
+  return start;
+}
+
+let displayYear, displayMonth;
+let currentView = 'calendar'; // 'calendar' or 'year'
+const today = new Date();
+
+const MONTH_NAMES = ['January','February','March','April','May','June',
+  'July','August','September','October','November','December'];
+const MONTH_SHORT = ['S','M','T','W','T','F','S'];
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+}
+
+function renderSidebar() {
+  const info = getOwnerForDate(today);
+  const owner = OWNERS.find(o => o.key === info.ownerKey);
+
+  // Current week card
+  const card = document.getElementById('currentWeekCard');
+  const colors = { A: 'var(--color-a)', B: 'var(--color-b)', C: 'var(--color-c)', D: 'var(--color-d)' };
+  card.style.background = colors[info.ownerKey];
+
+  const weekStart = getWeekStartForDate(today);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const fmt = d => `${MONTH_NAMES[d.getMonth()].slice(0,3)} ${d.getDate()}`;
+
+  card.innerHTML = `
+    <div class="cw-label">Current Owner</div>
+    <div class="cw-owner">${owner.name}</div>
+    <div class="cw-detail">Week ${info.weekNum} &middot; ${fmt(weekStart)} – ${fmt(weekEnd)}</div>
+  `;
+
+  // Owner list
+  const list = document.getElementById('ownerList');
+  list.innerHTML = OWNERS.map(o => `
+    <li class="owner-item ${o.key === info.ownerKey ? 'active' : ''}">
+      <span class="owner-dot" style="background:${colors[o.key]}"></span>
+      ${o.name}
+      <span class="owner-key">${o.key}</span>
+    </li>
+  `).join('');
+}
+
+function renderCalendar() {
+  document.getElementById('monthYear').textContent =
+    MONTH_NAMES[displayMonth] + ' ' + displayYear;
+
+  const cal = document.getElementById('calendar');
+  cal.innerHTML = '';
+
+  // Day headers
+  DAY_NAMES.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'day-header';
+    el.textContent = d;
+    cal.appendChild(el);
+  });
+
+  // Build flat list of all dates in the grid
+  const cells = [];
+  const firstOfMonth = new Date(displayYear, displayMonth, 1);
+  const startDow = firstOfMonth.getDay();
+  const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+
+  const prevMonthDays = new Date(displayYear, displayMonth, 0).getDate();
+  for (let i = startDow - 1; i >= 0; i--) {
+    const dayNum = prevMonthDays - i;
+    const date = new Date(displayYear, displayMonth - 1, dayNum);
+    cells.push({ dayNum, date, dimmed: true });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(displayYear, displayMonth, d);
+    cells.push({ dayNum: d, date, dimmed: false });
+  }
+  const totalCells = startDow + daysInMonth;
+  const remaining = (7 - (totalCells % 7)) % 7;
+  for (let d = 1; d <= remaining; d++) {
+    const date = new Date(displayYear, displayMonth + 1, d);
+    cells.push({ dayNum: d, date, dimmed: true });
+  }
+
+  // Resolve owners for all cells
+  const infos = cells.map(c => getOwnerForDate(c.date));
+
+  // Render cells with continuity info
+  cells.forEach((c, i) => {
+    const info = infos[i];
+    const col = i % 7;
+    const prevSame = col > 0 && infos[i - 1].ownerKey === info.ownerKey;
+    const nextSame = col < 6 && i + 1 < infos.length && infos[i + 1].ownerKey === info.ownerKey;
+    const isRunStart = !prevSame;
+    const isRunEnd = !nextSame;
+
+    cal.appendChild(createDayCell(c.dayNum, c.date, c.dimmed, info, isRunStart, isRunEnd));
+  });
+}
+
+function createDayCell(dayNum, date, dimmed, info, isRunStart, isRunEnd) {
+  const owner = OWNERS.find(o => o.key === info.ownerKey);
+  const isToday = isSameDay(date, today);
+  const isFriday = date.getDay() === 5;
+
+  const el = document.createElement('div');
+  el.className = 'day-cell';
+  if (dimmed) el.classList.add('dimmed');
+  if (isToday) el.classList.add('today-cell');
+
+  let html = '';
+
+  if (isFriday && !dimmed) {
+    html += `<div class="week-badge">W${info.weekNum}</div>`;
+  }
+
+  html += `<div class="day-number">${dayNum}</div>`;
+
+  // Owner bar with run continuity classes
+  const runCls = (isRunStart ? ' run-start' : '') + (isRunEnd ? ' run-end' : '');
+  const label = isRunStart ? `<span>${owner.name}</span>` : '';
+  html += `<div class="owner-bar bar-${info.ownerKey.toLowerCase()}${runCls}">${label}</div>`;
+
+  el.innerHTML = html;
+  return el;
+}
+
+// Year view
+function renderYearView() {
+  document.getElementById('monthYear').textContent = displayYear;
+
+  const grid = document.getElementById('yearGrid');
+  grid.innerHTML = '';
+
+  for (let m = 0; m < 12; m++) {
+    const card = document.createElement('div');
+    card.className = 'mini-month';
+    card.onclick = () => {
+      displayMonth = m;
+      switchView('calendar');
+    };
+
+    let html = `<div class="mini-month-title">${MONTH_NAMES[m]}</div>`;
+    html += '<div class="mini-cal">';
+
+    // Day headers
+    MONTH_SHORT.forEach(d => {
+      html += `<div class="mini-header">${d}</div>`;
+    });
+
+    const firstOfMonth = new Date(displayYear, m, 1);
+    const startDow = firstOfMonth.getDay();
+    const daysInMonth = new Date(displayYear, m + 1, 0).getDate();
+
+    // Build flat cell list with owner info (empties + days)
+    const cells = [];
+    for (let i = 0; i < startDow; i++) {
+      cells.push({ empty: true });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(displayYear, m, d);
+      const info = getOwnerForDate(date);
+      cells.push({ empty: false, d, date, ownerKey: info.ownerKey });
+    }
+
+    // Render with continuity
+    cells.forEach((c, i) => {
+      if (c.empty) {
+        html += '<div class="mini-day mini-empty"></div>';
+        return;
+      }
+      const col = i % 7;
+      const prevSame = col > 0 && i > 0 && !cells[i-1].empty && cells[i-1].ownerKey === c.ownerKey;
+      const nextSame = col < 6 && i+1 < cells.length && !cells[i+1].empty && cells[i+1].ownerKey === c.ownerKey;
+      const runCls = (!prevSame ? ' run-start' : '') + (!nextSame ? ' run-end' : '');
+      const todayCls = isSameDay(c.date, today) ? ' mini-today' : '';
+      html += `<div class="mini-day owner-${c.ownerKey.toLowerCase()}${runCls}${todayCls}">${c.d}</div>`;
+    });
+
+    html += '</div>';
+    card.innerHTML = html;
+    grid.appendChild(card);
+  }
+}
+
+function switchView(view) {
+  currentView = view;
+  document.getElementById('viewCalendar').style.display = view === 'calendar' ? '' : 'none';
+  document.getElementById('viewYear').style.display = view === 'year' ? '' : 'none';
+  document.getElementById('tabCalendar').className = 'tab' + (view === 'calendar' ? ' active' : '');
+  document.getElementById('tabYear').className = 'tab' + (view === 'year' ? ' active' : '');
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  if (currentView === 'calendar') {
+    renderCalendar();
+  } else {
+    renderYearView();
+  }
+}
+
+// Navigation
+document.getElementById('prevMonth').onclick = () => {
+  if (currentView === 'year') {
+    displayYear--;
+  } else {
+    displayMonth--;
+    if (displayMonth < 0) { displayMonth = 11; displayYear--; }
+  }
+  renderCurrentView();
+};
+document.getElementById('nextMonth').onclick = () => {
+  if (currentView === 'year') {
+    displayYear++;
+  } else {
+    displayMonth++;
+    if (displayMonth > 11) { displayMonth = 0; displayYear++; }
+  }
+  renderCurrentView();
+};
+document.getElementById('todayBtn').onclick = () => {
+  displayYear = today.getFullYear();
+  displayMonth = today.getMonth();
+  renderCurrentView();
+};
+
+// Tab switching
+document.getElementById('tabCalendar').onclick = () => switchView('calendar');
+document.getElementById('tabYear').onclick = () => switchView('year');
+
+// Init
+displayYear = today.getFullYear();
+displayMonth = today.getMonth();
+renderSidebar();
+renderCalendar();
+</script>
+</body>
+</html>
