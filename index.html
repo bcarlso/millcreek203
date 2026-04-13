@@ -855,12 +855,25 @@ function renderCalendar() {
   // Resolve owners for all cells
   const infos = cells.map(c => getOwnerForDate(c.date));
 
+  // Determine which cells are transition Fridays
+  const isTransitionFri = cells.map((c, i) => {
+    if (c.date.getDay() !== 5) return false;
+    const out = getOutgoingOwner(c.date);
+    return out.ownerKey !== infos[i].ownerKey;
+  });
+
   // Render cells with continuity info
   cells.forEach((c, i) => {
     const info = infos[i];
     const col = i % 7;
-    const prevSame = col > 0 && infos[i - 1].ownerKey === info.ownerKey;
-    const nextSame = col < 6 && i + 1 < infos.length && infos[i + 1].ownerKey === info.ownerKey;
+    // If prev cell is a transition Friday, Saturday's incoming color continues
+    // from the split bar — so don't treat Saturday as a run-start
+    const prevIsTransition = col > 0 && i > 0 && isTransitionFri[i - 1];
+    const prevSame = prevIsTransition || (col > 0 && infos[i - 1].ownerKey === info.ownerKey);
+    // If next cell is a transition Friday, Thursday's outgoing color continues
+    // into the split bar — so don't treat Thursday as a run-end
+    const nextIsTransition = col < 6 && i + 1 < infos.length && isTransitionFri[i + 1];
+    const nextSame = nextIsTransition || (col < 6 && i + 1 < infos.length && infos[i + 1].ownerKey === info.ownerKey);
     const isRunStart = !prevSame;
     const isRunEnd = !nextSame;
 
