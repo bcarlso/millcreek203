@@ -711,10 +711,13 @@ const START_KEYS  = ['B', 'D', 'A', 'C'];
 const DOUBLE_KEYS = ['D', 'A', 'C', 'B'];
 const KEY_ORDER = ['A', 'B', 'C', 'D'];
 
-function getFirstFriday(year) {
-  const jan1 = new Date(year, 0, 1);
-  const offset = (5 - jan1.getDay() + 7) % 7;
-  return new Date(year, 0, 1 + offset);
+// Schedule years are chained: each starts exactly 364 days (52 weeks)
+// after the previous. Anchored to 2023 schedule starting 1/6/2023.
+function getScheduleStart(year) {
+  const anchorMs = Date.UTC(2023, 0, 6);
+  const offsetDays = (year - 2023) * 364;
+  const utc = anchorMs + offsetDays * 86400000;
+  return new Date(new Date(utc).getUTCFullYear(), new Date(utc).getUTCMonth(), new Date(utc).getUTCDate());
 }
 
 function cycleIndex(year) {
@@ -742,8 +745,8 @@ function daysBetween(a, b) {
 
 function getOwnerForDate(date) {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  for (const schedYear of [d.getFullYear(), d.getFullYear() - 1]) {
-    const firstFri = getFirstFriday(schedYear);
+  for (const schedYear of [d.getFullYear() + 1, d.getFullYear(), d.getFullYear() - 1]) {
+    const firstFri = getScheduleStart(schedYear);
     const diffDays = daysBetween(firstFri, d);
     if (diffDays < 0) continue;
     const weekNum = Math.floor(diffDays / 7) + 1;
@@ -757,7 +760,7 @@ function getOwnerForDate(date) {
 // Get week start date (Friday) for a given date
 function getWeekStartForDate(date) {
   const info = getOwnerForDate(date);
-  const firstFri = getFirstFriday(info.scheduleYear);
+  const firstFri = getScheduleStart(info.scheduleYear);
   const start = new Date(firstFri);
   start.setDate(start.getDate() + (info.weekNum - 1) * 7);
   return start;
