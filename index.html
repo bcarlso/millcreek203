@@ -291,6 +291,44 @@
   .owner-bar.run-start.bar-c { border-left-color: var(--color-c); }
   .owner-bar.run-start.bar-d { border-left-color: var(--color-d); }
 
+  /* Transition bar — diagonal split on Fridays */
+  .owner-bar-split {
+    display: flex;
+    align-items: center;
+    min-height: 28px;
+    border-radius: 0;
+    margin-left: -8px;
+    margin-right: -8px;
+    overflow: hidden;
+    position: relative;
+  }
+  .owner-bar-split .split-out,
+  .owner-bar-split .split-in {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-height: 28px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    position: relative;
+  }
+  .owner-bar-split .split-out {
+    padding-left: 8px;
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
+    padding-right: 16px;
+  }
+  .owner-bar-split .split-in {
+    clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+    padding-left: 16px;
+    justify-content: flex-end;
+    padding-right: 8px;
+  }
+
+  .split-out.bar-a, .split-in.bar-a { background: var(--color-a-light); color: #1e5a9e; }
+  .split-out.bar-b, .split-in.bar-b { background: var(--color-b-light); color: #9e4a12; }
+  .split-out.bar-c, .split-in.bar-c { background: var(--color-c-light); color: #1e7a4a; }
+  .split-out.bar-d, .split-in.bar-d { background: var(--color-d-light); color: #5e3a8e; }
+
   /* Week number badge — shown on Fridays (start of new week) */
   .week-badge {
     font-size: 0.65rem;
@@ -367,6 +405,24 @@
   .mini-day.owner-b { background: var(--color-b-light); color: #9e4a12; }
   .mini-day.owner-c { background: var(--color-c-light); color: #1e7a4a; }
   .mini-day.owner-d { background: var(--color-d-light); color: #5e3a8e; }
+
+  .mini-day.mini-split { background: none !important; position: relative; overflow: hidden; }
+  .mini-day.mini-split .mini-split-out,
+  .mini-day.mini-split .mini-split-in {
+    position: absolute;
+    inset: 0;
+  }
+  .mini-day.mini-split .mini-split-out {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  .mini-day.mini-split .mini-split-in {
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+  .mini-split-out.bg-a, .mini-split-in.bg-a { background: var(--color-a-light); }
+  .mini-split-out.bg-b, .mini-split-in.bg-b { background: var(--color-b-light); }
+  .mini-split-out.bg-c, .mini-split-in.bg-c { background: var(--color-c-light); }
+  .mini-split-out.bg-d, .mini-split-in.bg-d { background: var(--color-d-light); }
+  .mini-day.mini-split .mini-split-label { position: relative; z-index: 1; color: var(--gray-800); }
 
   /* ── Responsive ── */
   @media (max-width: 900px) {
@@ -470,13 +526,19 @@ function getOwnerForWeek(year, weekNum) {
   return normal50;
 }
 
+function daysBetween(a, b) {
+  // Use UTC to avoid DST issues
+  const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return (utcB - utcA) / 86400000;
+}
+
 function getOwnerForDate(date) {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   for (const schedYear of [d.getFullYear(), d.getFullYear() - 1]) {
     const firstFri = getFirstFriday(schedYear);
-    const diffMs = d - firstFri;
-    if (diffMs < 0) continue;
-    const diffDays = Math.floor(diffMs / 86400000);
+    const diffDays = daysBetween(firstFri, d);
+    if (diffDays < 0) continue;
     const weekNum = Math.floor(diffDays / 7) + 1;
     if (weekNum >= 1 && weekNum <= 52) {
       return { ownerKey: getOwnerForWeek(schedYear, weekNum), weekNum, scheduleYear: schedYear };
@@ -594,6 +656,12 @@ function renderCalendar() {
   });
 }
 
+function getOutgoingOwner(date) {
+  const prev = new Date(date);
+  prev.setDate(prev.getDate() - 1);
+  return getOwnerForDate(prev);
+}
+
 function createDayCell(dayNum, date, dimmed, info, isRunStart, isRunEnd) {
   const owner = OWNERS.find(o => o.key === info.ownerKey);
   const isToday = isSameDay(date, today);
@@ -612,7 +680,21 @@ function createDayCell(dayNum, date, dimmed, info, isRunStart, isRunEnd) {
 
   html += `<div class="day-number">${dayNum}</div>`;
 
-  // Owner bar with run continuity classes
+  // Check if Friday transition (different owner from Thursday)
+  if (isFriday) {
+    const outgoing = getOutgoingOwner(date);
+    if (outgoing.ownerKey !== info.ownerKey) {
+      const outOwner = OWNERS.find(o => o.key === outgoing.ownerKey);
+      html += `<div class="owner-bar-split">`;
+      html += `<div class="split-out bar-${outgoing.ownerKey.toLowerCase()}">${outOwner.name}</div>`;
+      html += `<div class="split-in bar-${info.ownerKey.toLowerCase()}">${owner.name}</div>`;
+      html += `</div>`;
+      el.innerHTML = html;
+      return el;
+    }
+  }
+
+  // Normal owner bar with run continuity classes
   const runCls = (isRunStart ? ' run-start' : '') + (isRunEnd ? ' run-end' : '');
   const label = isRunStart ? `<span>${owner.name}</span>` : '';
   html += `<div class="owner-bar bar-${info.ownerKey.toLowerCase()}${runCls}">${label}</div>`;
@@ -666,10 +748,24 @@ function renderYearView() {
         return;
       }
       const col = i % 7;
-      const prevSame = col > 0 && i > 0 && !cells[i-1].empty && cells[i-1].ownerKey === c.ownerKey;
-      const nextSame = col < 6 && i+1 < cells.length && !cells[i+1].empty && cells[i+1].ownerKey === c.ownerKey;
-      const runCls = (!prevSame ? ' run-start' : '') + (!nextSame ? ' run-end' : '');
+      const isFriday = c.date.getDay() === 5;
       const todayCls = isSameDay(c.date, today) ? ' mini-today' : '';
+
+      // Check for transition Friday
+      if (isFriday) {
+        const outgoing = getOutgoingOwner(c.date);
+        if (outgoing.ownerKey !== c.ownerKey) {
+          html += `<div class="mini-day mini-split${todayCls}">`;
+          html += `<div class="mini-split-out bg-${outgoing.ownerKey.toLowerCase()}"></div>`;
+          html += `<div class="mini-split-in bg-${c.ownerKey.toLowerCase()}"></div>`;
+          html += `<span class="mini-split-label">${c.d}</span></div>`;
+          return;
+        }
+      }
+
+      const prevSame = col > 0 && i > 0 && !cells[i-1].empty && cells[i-1].ownerKey === c.ownerKey;
+      const nextSameVal = col < 6 && i+1 < cells.length && !cells[i+1].empty && cells[i+1].ownerKey === c.ownerKey;
+      const runCls = (!prevSame ? ' run-start' : '') + (!nextSameVal ? ' run-end' : '');
       html += `<div class="mini-day owner-${c.ownerKey.toLowerCase()}${runCls}${todayCls}">${c.d}</div>`;
     });
 
